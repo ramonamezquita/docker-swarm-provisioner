@@ -43,14 +43,14 @@ destroy() {
 create() {
   terraform init
   aerraform apply -auto-approve -var "instance_count=$1" -var "ssh_pvt_key_file=$2"
-  terraform output -raw ip_addresses | inventory 1 > ansible/inventory.ini
+  terraform output -raw ip_addresses | make_inventory 1
   #ansible-playbook -u ubuntu --key-file $2 swarm-init.yml
 }
 
 
-inventory() {
+make_inventory() {
   num_managers=$1
-  sed -e '1s/^/[managers] \n/' -e "$[num_managers+1]s/^/[workers] \n/"
+  sed -e '1s/^/[managers] \n/' -e "$[num_managers+1]s/^/[workers] \n/" > ansible/inventory.ini
 }
 
 

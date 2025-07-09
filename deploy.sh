@@ -14,36 +14,43 @@
 #   - Initializes a Docker Swarm cluster with 1 manager and N-1 workers
 #   - Uses Terraform for infrastructure-as-code deployment
 #   - Uses Ansible for configuration management
-#
-# Usage:
-#   ./deploy.sh -K <ssh_key_file> [-C <instance_count>]
-#
-#
-# Example:
-#   ./deploy.sh -K ~/.ssh/gcp_key -C 5
 # -----------------------------------------------------------------------------
-
 
 set -e 
 
-DEFAULT_INSTANCE_COUNT=3
-
+DEFAULT_NUM_INSTANCES=3
+READY_TO_LAUNCH=false
+READY_TO_DESTROY=false
+PROG=$(basename "$0")
 
 usage() {
-  echo "usage: $PROG -K <ssh_key_file> [-C <instance_count>]            "
-  echo "       -K, --key-file <file>        - SSH private key file.     "
-  echo "       -C, --instance-count <int>   - Instance count. Default 3."
-  echo "       -h, --help                   - Show this help message.   "
-  echo "                                                                "
-  echo "example:                                                        "
-  echo "  ./deploy.sh -K ~/.ssh/gcp_key -C 5                            "
+  echo "usage: $PROG -K <KEY_FILE> <command>"
+  echo "       -K KEY_FILE, --key-file KEY_FILE          - SSH private key file."
+  echo "commands:"
+  echo "       -c NUM_INSTANCES, --create NUM_INSTANCES  - Create a Docker Swarm cluster in GCP."
+  echo "       -d, --destroy                             - Destroy the cluster."
+  echo "examples:"
+  echo "       $PROG -K ~/.ssh/id_rsa -c 3           - Create a cluster with 3 nodes."
+  echo "       $PROG -K ~/.ssh/id_rsa -d             - Destroy the cluster."
+}
+
+destroy() {
+  terraform destroy -auto-approve -var "ssh_pvt_key_file=$1"
+  rm -f ansible/inventory.ini
 }
 
 
+create() {
+  terraform init
+  aerraform apply -auto-approve -var "instance_count=$1" -var "ssh_pvt_key_file=$2"
+  terraform output -raw ip_addresses | inventory 1 > ansible/inventory.ini
+  #ansible-playbook -u ubuntu --key-file $2 swarm-init.yml
+}
 
-define_groups() {
-  managers_count=$1
-  sed -e '1s/^/[managers] \n/' -e "$[managers_count+1]s/^/[workers] \n/"
+
+inventory() {
+  num_managers=$1
+  sed -e '1s/^/[managers] \n/' -e "$[num_managers+1]s/^/[workers] \n/"
 }
 
 
@@ -57,11 +64,20 @@ parse_args() {
   while [ $# -gt 0 ]; do
     case "$1" in
       -K|--key-file)
-        key_file="$2"
+	if ! [ -f "$2" ]; then
+	  echo "Error: KEY_FILE must be a valid file."
+	  exit 1
+	fi
+        KEY_FILE="$2"
 	shift 2
 	;;
-      -C|--instance-count)
-        instance_count=$2
+      -c|--create)
+	READY_TO_LAUNCH=true
+        NUM_INSTANCES=$2
+	shift 2
+	;;
+      -d|--destroy)
+	READY_TO_DESTROY=true
 	shift 2
 	;;
       -h|--help)
@@ -78,17 +94,21 @@ parse_args() {
 
 PROG=`basename $0`
 parse_args "$@"
-: ${instance_count:=$DEFAULT_INSTANCE_COUNT}
+: ${NUM_INSTANCES:=$DEFAULT_NUM_INSTANCES}
 
-if [ $instance_count -lt 2 ]; then
-  echo "Error: Instance count must be at least 2."
+if [ $NUM_INSTANCES -lt 2 ]; then
+  echo "Error: Number of instances must be at least 2."
   exit 1
 fi
 
-echo "Running with args {"key_file":${key_file}, "instance_count":${instance_count}}."
+if [ "$READY_TO_LAUNCH" = true ]; then  
+  echo "Launching cluster with args {\"KEY_FILE\":\"${KEY_FILE}\", \"NUM_INSTANCES\":${NUM_INSTANCES}}."
+  create "$NUM_INSTANCES" "$KEY_FILE"
+elif [ "$READY_TO_DESTROY" = true ]; then
+  echo "Destroying cluster"
+  destroy "$KEY_FILE"
+else
+  echo "Error: Must supply either the --create or --destroy command with appropriate arguments."
+  exit 1
+fi
 
-
-terraform init
-terraform apply -auto-approve -var "instance_count=${instance_count}" -var "ssh_pvt_key_file=${key_file}"
-terraform output | define_groups 1 > ansible/inventory.ini
-#ansible-playbook -u ubuntu --key-file ${key_file} swarm-init.yml

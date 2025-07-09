@@ -24,4 +24,3 @@ usage: deploy.sh -K <ssh_key_file> [-C <instance_count>]
 example:                                                        
   ./deploy.sh -K ~/.ssh/gcp_key -C 5 
 ```
-# gcp-docker-swarm

@@ -30,8 +30,8 @@ usage() {
   echo "       -c NUM_INSTANCES, --create NUM_INSTANCES  - Create a Docker Swarm cluster in GCP."
   echo "       -d, --destroy                             - Destroy the cluster."
   echo "examples:"
-  echo "       $PROG -K ~/.ssh/id_rsa -c 3           - Create a cluster with 3 nodes."
-  echo "       $PROG -K ~/.ssh/id_rsa -d             - Destroy the cluster."
+  echo "       $PROG -K ~/.ssh/id_rsa -c 3     - Create a cluster with 3 nodes."
+  echo "       $PROG -K ~/.ssh/id_rsa -d       - Destroy the cluster."
 }
 
 destroy() {
@@ -42,7 +42,7 @@ destroy() {
 
 create() {
   terraform init
-  aerraform apply -auto-approve -var "instance_count=$1" -var "ssh_pvt_key_file=$2"
+  terraform apply -auto-approve -var "instance_count=$1" -var "ssh_pvt_key_file=$2"
   terraform output -raw ip_addresses | make_inventory 1
   #ansible-playbook -u ubuntu --key-file $2 swarm-init.yml
 }
@@ -78,7 +78,7 @@ parse_args() {
 	;;
       -d|--destroy)
 	READY_TO_DESTROY=true
-	shift 2
+	shift
 	;;
       -h|--help)
 	usage

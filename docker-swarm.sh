@@ -18,10 +18,12 @@
 
 set -e 
 
+
 DEFAULT_NUM_INSTANCES=3
 READY_TO_LAUNCH=false
 READY_TO_DESTROY=false
 PROG=$(basename "$0")
+
 
 usage() {
   echo "usage: $PROG -K <KEY_FILE> <command>"
@@ -34,6 +36,7 @@ usage() {
   echo "       $PROG -K ~/.ssh/id_rsa -d       - Destroy the cluster."
 }
 
+
 destroy() {
   terraform destroy -auto-approve -var "ssh_pvt_key_file=$1"
   rm -f ansible/inventory.ini
@@ -43,12 +46,12 @@ destroy() {
 create() {
   terraform init
   terraform apply -auto-approve -var "instance_count=$1" -var "ssh_pvt_key_file=$2"
-  terraform output -raw ip_addresses | make_inventory 1
-  #ansible-playbook -u ubuntu --key-file $2 swarm-init.yml
+  terraform output -raw ip_addresses | make_inventory_file 1
+  ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -u ubuntu -i ansible/inventory.ini --private-key $2 ansible/swarm-create.yml
 }
 
 
-make_inventory() {
+make_inventory_file() {
   num_managers=$1
   sed -e '1s/^/[managers] \n/' -e "$[num_managers+1]s/^/[workers] \n/" > ansible/inventory.ini
 }
@@ -92,6 +95,7 @@ parse_args() {
   done
 }
 
+
 PROG=`basename $0`
 parse_args "$@"
 : ${NUM_INSTANCES:=$DEFAULT_NUM_INSTANCES}
@@ -102,10 +106,10 @@ if [ $NUM_INSTANCES -lt 2 ]; then
 fi
 
 if [ "$READY_TO_LAUNCH" = true ]; then  
-  echo "Launching cluster with args {\"KEY_FILE\":\"${KEY_FILE}\", \"NUM_INSTANCES\":${NUM_INSTANCES}}."
+  echo "Launching cluster with args: {\"KEY_FILE\":\"${KEY_FILE}\", \"NUM_INSTANCES\":${NUM_INSTANCES}}."
   create "$NUM_INSTANCES" "$KEY_FILE"
 elif [ "$READY_TO_DESTROY" = true ]; then
-  echo "Destroying cluster"
+  echo "Destroying cluster..."
   destroy "$KEY_FILE"
 else
   echo "Error: Must supply either the --create or --destroy command with appropriate arguments."

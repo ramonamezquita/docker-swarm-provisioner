@@ -22,8 +22,8 @@ resource "google_compute_instance" "vms" {
     }
   }
 
-  # The local-exec provisioner runs without waiting for the Droplet to become available, 
-  # so the execution of the playbook may precede the actual availability of the Droplet. 
+  # The local-exec provisioner runs without waiting for the VM to become available, 
+  # so the execution of the playbook may precede the actual availability of the VM. 
   # To remedy this, we define the remote-exec provisioner to contain commands to execute 
   # on the target server. For remote-exec to execute, the target server must be available. 
   # Since remote-exec runs before local-exec, the server will be fully initialized by the 

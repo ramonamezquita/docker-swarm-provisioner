@@ -1,23 +1,13 @@
 #!/bin/bash
 
-# -----------------------------------------------------------------------------
 # GCP Docker Swarm Cluster Provisioning Script
-# -----------------------------------------------------------------------------
 #
-# Description:
-#   This script automates the provisioning of a Docker Swarm cluster on Google
-#   Cloud Platform (GCP) using Terraform for infrastructure deployment and
-#   Ansible for cluster configuration.
-#
-# Features:
-#   - Creates specified number of VM instances (minimum 2)
-#   - Initializes a Docker Swarm cluster with 1 manager and N-1 workers
-#   - Uses Terraform for infrastructure-as-code deployment
-#   - Uses Ansible for configuration management
-# -----------------------------------------------------------------------------
+# This script automates the provisioning of a Docker Swarm cluster on Google
+# Cloud Platform (GCP) using Terraform for infrastructure deployment and
+# Ansible for cluster configuration.
+
 
 set -e 
-
 
 DEFAULT_NUM_INSTANCES=3
 READY_TO_LAUNCH=false
@@ -26,14 +16,15 @@ PROG=$(basename "$0")
 
 
 usage() {
-  echo "usage: $PROG -K <KEY_FILE> <command>"
-  echo "       -K KEY_FILE, --key-file KEY_FILE          - SSH private key file."
+  echo "usage: $PROG --private-key PRIVATE_KEY_FILE <command>"
+  echo "       --private-key PRIVATE_KEY_FILE            - SSH private key file."
   echo "commands:"
   echo "       -c NUM_INSTANCES, --create NUM_INSTANCES  - Create a Docker Swarm cluster in GCP."
   echo "       -d, --destroy                             - Destroy the cluster."
+  echo "       -h, --help                                - Show this message."
   echo "examples:"
-  echo "       $PROG -K ~/.ssh/id_rsa -c 3     - Create a cluster with 3 nodes."
-  echo "       $PROG -K ~/.ssh/id_rsa -d       - Destroy the cluster."
+  echo "       $PROG --private-key ~/.ssh/id_rsa -c 3    - Create a cluster with 3 nodes."
+  echo "       $PROG --private-key ~/.ssh/id_rsa -d      - Destroy the cluster."
 }
 
 
@@ -66,12 +57,12 @@ parse_args() {
 
   while [ $# -gt 0 ]; do
     case "$1" in
-      -K|--key-file)
+      --private-key)
 	if ! [ -f "$2" ]; then
-	  echo "Error: KEY_FILE must be a valid file."
+	  echo "Error: PRIVATE_KEY_FILE must be a valid file."
 	  exit 1
 	fi
-        KEY_FILE="$2"
+        PRIVATE_KEY_FILE="$2"
 	shift 2
 	;;
       -c|--create)
@@ -106,13 +97,12 @@ if [ $NUM_INSTANCES -lt 2 ]; then
 fi
 
 if [ "$READY_TO_LAUNCH" = true ]; then  
-  echo "Launching cluster with args: {\"KEY_FILE\":\"${KEY_FILE}\", \"NUM_INSTANCES\":${NUM_INSTANCES}}."
-  create "$NUM_INSTANCES" "$KEY_FILE"
+  echo "Launching cluster with args: {\"PRIVATE_KEY_FILE\":\"${PRIVATE_KEY_FILE}\", \"NUM_INSTANCES\":${NUM_INSTANCES}}."
+  create "$NUM_INSTANCES" "$PRIVATE_KEY_FILE"
 elif [ "$READY_TO_DESTROY" = true ]; then
   echo "Destroying cluster..."
-  destroy "$KEY_FILE"
+  destroy "$PRIVATE_KEY_FILE"
 else
   echo "Error: Must supply either the --create or --destroy command with appropriate arguments."
   exit 1
 fi
-

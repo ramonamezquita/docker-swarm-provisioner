@@ -6,8 +6,8 @@
 # Cloud Platform (GCP) using Terraform for infrastructure deployment and
 # Ansible for cluster configuration.
 
-
 set -e 
+
 
 DEFAULT_NUM_INSTANCES=3
 READY_TO_LAUNCH=false
@@ -87,7 +87,6 @@ parse_args() {
 }
 
 
-PROG=`basename $0`
 parse_args "$@"
 : ${NUM_INSTANCES:=$DEFAULT_NUM_INSTANCES}
 

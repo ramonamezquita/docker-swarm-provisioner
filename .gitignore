@@ -34,4 +34,4 @@ override.tf.json
 # Ansible
 ansible/*
 !ansible/docker-install.sh
-!ansible/swarm-install.sh
+!ansible/swarm-init.sh

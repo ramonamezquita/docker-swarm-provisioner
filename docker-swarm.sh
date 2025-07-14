@@ -12,6 +12,7 @@ set -e
 DEFAULT_NUM_INSTANCES=3
 READY_TO_LAUNCH=false
 READY_TO_DESTROY=false
+ANSIBLE_PLAYBOOKS=("swarm-init.yml")
 PROG=$(basename "$0")
 
 
@@ -33,14 +34,18 @@ destroy() {
   rm -f ansible/inventory.ini
 }
 
+run_playbooks() {
+  for pb in ${ANSIBLE_PLAYBOOKS[@]}; do
+    ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -u ubuntu -i ansible/inventory.ini --private-key $1 ansible/$pb
+  done
+}
 
 create() {
   terraform init
   terraform apply -auto-approve -var "instance_count=$1" -var "ssh_pvt_key_file=$2"
   terraform output -raw ip_addresses | make_inventory_file 1
-  ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -u ubuntu -i ansible/inventory.ini --private-key $2 ansible/swarm-create.yml
+  run_playbooks $2
 }
-
 
 make_inventory_file() {
   num_managers=$1
@@ -71,8 +76,15 @@ parse_args() {
 	shift 2
 	;;
       -d|--destroy)
-	READY_TO_DESTROY=true
+        READY_TO_DESTROY=true
 	shift
+	;;
+      -pb|--playbooks)
+	IN="$2"
+        arrIN=(${IN//;/ })
+	# Append input array.
+        ANSIBLE_PLAYBOOKS=( "${ANSIBLE_PLAYBOOKS[@]}" "${arrIN[@]}" )
+	shift 2
 	;;
       -h|--help)
 	usage
@@ -85,6 +97,7 @@ parse_args() {
     esac
   done
 }
+
 
 
 parse_args "$@"

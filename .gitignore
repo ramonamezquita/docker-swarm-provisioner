@@ -30,4 +30,8 @@ override.tf.json
 # example: *tfplan*
 
 .DS_Store
-ansible/inventory.ini
+
+# Ansible
+ansible/*
+!ansible/docker-install.sh
+!ansible/swarm-install.sh
